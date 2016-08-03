@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
+project(uhttp LANGUAGES CXX)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(UHTTP_PLATFORM_SRC src/socket_posix.cpp)	

@@ -16,9 +16,6 @@
 using namespace std;
 using namespace uhttp;
 
-/**
- * Create an empty URI 
-*/
 URI::URI() :
 	rawURI(),
 	didParse(false)

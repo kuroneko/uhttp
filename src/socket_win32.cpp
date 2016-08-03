@@ -11,7 +11,7 @@
 using namespace std;
 using namespace uhttp;
 
-TcpSocket::TcpSocket(const std::string &address, tcp_port_t port) :
+TcpStream::TcpStream(const std::string &address, tcp_port_t port) :
 	tcp_no_delay(false),
 	hostname(address),
 	port(port),
@@ -23,7 +23,7 @@ TcpSocket::TcpSocket(const std::string &address, tcp_port_t port) :
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 }
 
-TcpSocket::~TcpSocket()
+TcpStream::~TcpStream()
 {
 	if (!closed()) {
 		close();
@@ -32,7 +32,7 @@ TcpSocket::~TcpSocket()
 }
 
 bool
-TcpSocket::connect()
+TcpStream::connect()
 {
 	// stringify the port number for use in the getaddrinfo call
 	char	serviceName[16];
@@ -74,7 +74,7 @@ TcpSocket::connect()
 }
 
 void
-TcpSocket::close()
+TcpStream::close()
 {
 	if (socket_fd >= 0) {
 		::closesocket(socket_fd);
@@ -83,19 +83,19 @@ TcpSocket::close()
 }
 
 bool
-TcpSocket::closed()
+TcpStream::closed()
 {
 	return (socket_fd == -1);
 }
 
 SocketError
-TcpSocket::error() const
+TcpStream::error() const
 {
 	return errState;
 }
 
 void
-TcpSocket::setErrorState()
+TcpStream::setErrorState()
 {
 	int errCode = WSAGetLastError();
 	switch (errCode) {
@@ -130,7 +130,7 @@ TcpSocket::setErrorState()
 }
 
 ssize_t
-TcpSocket::read(void *buf, size_t len)
+TcpStream::read(void *buf, size_t len)
 {
 	if (closed()) {
 		errState = SocketError::NOT_OPEN;
@@ -148,7 +148,7 @@ TcpSocket::read(void *buf, size_t len)
 }
 
 ssize_t
-TcpSocket::peek(void *buf, size_t len)
+TcpStream::peek(void *buf, size_t len)
 {
 	if (closed()) {
 		errState = SocketError::NOT_OPEN;
@@ -166,7 +166,7 @@ TcpSocket::peek(void *buf, size_t len)
 }
 
 ssize_t
-TcpSocket::write(void *buf, size_t len)
+TcpStream::write(void *buf, size_t len)
 {
 	if (closed()) {
 		errState = SocketError::NOT_OPEN;

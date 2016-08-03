@@ -83,7 +83,7 @@ TcpStream::close()
 }
 
 bool
-TcpStream::closed()
+TcpStream::closed() const
 {
 	return (socket_fd == -1);
 }

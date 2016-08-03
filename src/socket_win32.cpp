@@ -8,8 +8,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-// winsock decided to arbitrarily not follow the posix API - fixup to work around that.
-
 using namespace std;
 using namespace uhttp;
 
@@ -20,11 +18,9 @@ TcpSocket::TcpSocket(const std::string &address, tcp_port_t port) :
 	tcp_no_delay(false),
 	errState(SocketError::OK)
 {
-#ifdef _WIN32
 	// ensure winsock is initialized
 	WSADATA	wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
-#endif
 }
 
 TcpSocket::~TcpSocket()
@@ -32,9 +28,7 @@ TcpSocket::~TcpSocket()
 	if (!closed()) {
 		close();
 	}
-#ifdef _WIN32
 	WSACleanup();
-#endif
 }
 
 bool
@@ -64,7 +58,7 @@ TcpSocket::connect()
     }
 
     // disable NAGLE if requested.
-    if (tcp_no_delay) {    	
+    if (tcp_no_delay) {
     	int nodelay = 1;
     	setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
     }

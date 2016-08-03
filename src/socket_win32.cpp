@@ -63,7 +63,7 @@ TcpStream::connect()
 		setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 	}
 
-	if (!::connect(socket_fd, results->ai_addr, results->ai_addrlen)) {
+	if (!::connect(socket_fd, results->ai_addr, static_cast<int>(results->ai_addrlen))) {
 		errState = SocketError::OK;
 		return true;
 	}
@@ -138,7 +138,7 @@ TcpStream::read(void *buf, size_t len)
 	}
 	ssize_t opLen;
 
-	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), len, 0);
+	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), static_cast<int>(len), 0);
 	if (opLen != SOCKET_ERROR) {
 		errState = SocketError::OK;
 		return opLen;
@@ -156,7 +156,7 @@ TcpStream::peek(void *buf, size_t len)
 	}
 	ssize_t opLen;
 
-	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), len, MSG_PEEK);
+	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), static_cast<int>(len), MSG_PEEK);
 	if (opLen != SOCKET_ERROR) {
 		errState = SocketError::OK;
 		return opLen;
@@ -174,7 +174,7 @@ TcpStream::write(void *buf, size_t len)
 	}
 	ssize_t opLen;
 
-	opLen = send(socket_fd, reinterpret_cast<const char *>(buf), len, 0);
+	opLen = send(socket_fd, reinterpret_cast<const char *>(buf), static_cast<int>(len), 0);
 	if (opLen != SOCKET_ERROR) {
 		errState = SocketError::OK;
 		return opLen;

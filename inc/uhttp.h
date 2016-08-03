@@ -26,6 +26,8 @@ namespace uhttp {
 		NETWORK_DOWN,
 		NETWORK_UNREACHABLE,
 		NETWORK_RESET,
+		CONNECTION_REFUSED,
+		TIMED_OUT,
 	};
 
 	class Socket {

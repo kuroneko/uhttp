@@ -1,12 +1,19 @@
-/* socket_win32.cpp
-*
-* Socket Abstraction for Win32 (Winsock) hosts.
+/* socket_posix.cpp
+ *
+ * Socket Abstraction for Posix-like hosts.
 */
 
 #include "uhttp.h"
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <cstring>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+
 
 using namespace std;
 using namespace uhttp;
@@ -18,9 +25,6 @@ TcpSocket::TcpSocket(const std::string &address, tcp_port_t port) :
 	socket_fd(-1),
 	errState(SocketError::OK)
 {
-	// ensure winsock is initialized
-	WSADATA	wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
 }
 
 TcpSocket::~TcpSocket()
@@ -28,24 +32,27 @@ TcpSocket::~TcpSocket()
 	if (!closed()) {
 		close();
 	}
-	WSACleanup();
 }
 
 bool
 TcpSocket::connect()
 {
 	// stringify the port number for use in the getaddrinfo call
-	char	serviceName[16];
-	_snprintf_s(serviceName, 16, _TRUNCATE, "%d", port);
+	char				serviceName[16];
+
+	snprintf(serviceName, 16, "%d", port);
+	serviceName[15] = '\0';
 
 	// populate the getaddrinfo request structure, and perform the lookup
-	struct addrinfo addrHints;
+	struct addrinfo		addrHints;
+
 	memset(&addrHints, 0, sizeof(addrHints));
 	addrHints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
 	addrHints.ai_family = AF_INET;
 	addrHints.ai_socktype = SOCK_STREAM;
 
-	struct addrinfo *results = NULL;
+	struct addrinfo 	*results = NULL;
+
 	if (getaddrinfo(hostname.c_str(), serviceName, &addrHints, &results)) {
 		errState = SocketError::HOSTNAME_NOT_FOUND;
 		return false;
@@ -60,16 +67,17 @@ TcpSocket::connect()
 	// disable NAGLE if requested.
 	if (tcp_no_delay) {
 		int nodelay = 1;
-		setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
+		setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, 
+			reinterpret_cast<void *>(&nodelay), sizeof(nodelay));
 	}
 
 	if (!::connect(socket_fd, results->ai_addr, results->ai_addrlen)) {
 		errState = SocketError::OK;
 		return true;
 	}
-	::closesocket(socket_fd);
+	setErrorState();
+	::close(socket_fd);
 	socket_fd = -1;
-	errState = SocketError::CONNECT_FAILURE;
 	return false;
 }
 
@@ -77,7 +85,7 @@ void
 TcpSocket::close()
 {
 	if (socket_fd >= 0) {
-		::closesocket(socket_fd);
+		::close(socket_fd);
 		socket_fd = -1;
 	}
 }
@@ -97,30 +105,25 @@ TcpSocket::error() const
 void
 TcpSocket::setErrorState()
 {
-	int errCode = WSAGetLastError();
-	switch (errCode) {
-	case WSAEINTR:
-	case WSA_OPERATION_ABORTED:
-		// an interrupted or aborted operation is actually no-error, we've been forced
-		// to stop by explicit action on our behalf.
+	switch (errno) {
+	case EINTR:
+		// an interrupted or aborted operation is actually no-error, we've been 
+		// forced to stop by explicit action on our behalf.
 		errState = SocketError::OK;
 		break;
-	case WSAENETDOWN:
-		errState = SocketError::NETWORK_DOWN;
+	case ECONNREFUSED:
+		errState = SocketError::CONNECTION_REFUSED;
 		break;
-	case WSAENETUNREACH:
+	case ETIMEDOUT:
+		errState = SocketError::TIMED_OUT;
+		break;
+	case ENETUNREACH:
 		errState = SocketError::NETWORK_UNREACHABLE;
 		break;
-	case WSAECONNABORTED:
-		errState = SocketError::CONNECTION_ABORTED;
-		break;
-	case WSAENETRESET:
-		errState = SocketError::NETWORK_RESET;
-		break;
-	case WSAENOTCONN:
+	case ENOTCONN:
 		errState = SocketError::NOT_CONNECTED;
 		break;
-	case WSAECONNRESET:
+	case ECONNRESET:
 		errState = SocketError::CONNECTION_RESET;
 		break;
 	default:
@@ -139,7 +142,7 @@ TcpSocket::read(void *buf, size_t len)
 	ssize_t opLen;
 
 	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), len, 0);
-	if (opLen != SOCKET_ERROR) {
+	if (opLen >= 0) {
 		errState = SocketError::OK;
 		return opLen;
 	}
@@ -157,7 +160,7 @@ TcpSocket::peek(void *buf, size_t len)
 	ssize_t opLen;
 
 	opLen = recv(socket_fd, reinterpret_cast<char *>(buf), len, MSG_PEEK);
-	if (opLen != SOCKET_ERROR) {
+	if (opLen >= 0) {
 		errState = SocketError::OK;
 		return opLen;
 	}
@@ -175,7 +178,7 @@ TcpSocket::write(void *buf, size_t len)
 	ssize_t opLen;
 
 	opLen = send(socket_fd, reinterpret_cast<const char *>(buf), len, 0);
-	if (opLen != SOCKET_ERROR) {
+	if (opLen >= 0) {
 		errState = SocketError::OK;
 		return opLen;
 	}

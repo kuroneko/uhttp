@@ -13,4 +13,6 @@ endif()
 add_library(uhttp STATIC 
 	src/uri.cpp
 	${UHTTP_PLATFORM_SRC})
-target_include_dirs(uhttp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+target_compile_features(uhttp PUBLIC cxx_strong_enums)
+target_include_directories(uhttp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+set_property(TARGET uhttp PROPERTY CXX_STANDARD 11)

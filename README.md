@@ -21,7 +21,7 @@ at this time.
 
 Woefully incomplete at this time.
 
- * Basic socket code for win32 complete.  posix to follow shortly.
+ * Basic socket code complete.
  * URI parsing implemented but untested.
 
 ## License
